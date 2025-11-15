@@ -5,8 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -14,9 +13,284 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  createdAt DateTime @default(now())
+model users {
+  id         Int      @id @default(autoincrement())
+  name       String
+  email      String   @unique
+  password   String
+  role       UserRole
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  uploaded_documents documents[]
+  conversations      conversations[]
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+model conversations {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  title      String
+  is_pinned  Boolean  @default(false)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  user  users   @relation(fields: [user_id], references: [id])
+  chats chats[]
+}
+
+model chats {
+  id              Int      @id @default(autoincrement())
+  conversation_id Int
+  role            ChatRole
+  message         String
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  conversation    conversations     @relation(fields: [conversation_id], references: [id])
+  chat_references chat_references[]
+}
+
+enum ChatRole {
+  bot
+  user
+}
+
+model chat_references {
+  id              Int      @id @default(autoincrement())
+  chat_id         Int
+  document_id     Int
+  relevance_score Float
+  quote           String?
+  page_number     Int?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  chat     chats     @relation(fields: [chat_id], references: [id])
+  document documents @relation(fields: [document_id], references: [id])
+}
+
+/// =======================
+/// DOCUMENTS
+/// =======================
+
+model documents {
+  id Int @id @default(autoincrement())
+
+  title       String?
+  creator     String?
+  keywords    String?
+  description String?
+  publisher   String?
+  contributor String?
+  date        DateTime?
+  type        DocType
+  format      String?
+  identifier  String?
+  source      String?
+  language    String?   @db.VarChar(50)
+  relation    String?
+  coverage    String?
+  rights      String?
+
+  doi            String?   @db.VarChar(150)
+  abstract       String?
+  citation_count Int?
+  sentiment      Sentiment
+
+  uploaded_by          Int?
+  file_path            String?
+  url                  String?
+  is_private           Boolean @default(false)
+  is_metadata_complete Boolean @default(false)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  uploader                   users?                  @relation(fields: [uploaded_by], references: [id])
+  document_creators          document_creators[]
+  document_contributors      document_contributors[]
+  document_subjects          document_subjects[]
+  document_relations         document_relations[]
+  document_relations_related document_relations[]    @relation("related_docs")
+  document_keywords          document_keywords[]
+  document_chunks            document_chunks[]
+  cited_by                   citations[]             @relation("document_citations_cited")
+  cites                      citations[]             @relation("document_citations_citing")
+  chatReferences             chat_references[]
+}
+
+enum DocType {
+  journal
+  conference
+  thesis
+  report
+  book
+}
+
+enum Sentiment {
+  support
+  neutral
+  dispute
+}
+
+/// =======================
+/// CREATORS
+/// =======================
+
+model creators {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(150)
+  affiliation String?
+  orcid       String?  @db.VarChar(50)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  document_creators document_creators[]
+}
+
+model document_creators {
+  id          Int      @id @default(autoincrement())
+  document_id Int
+  creator_id  Int
+  position    Int
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  document documents @relation(fields: [document_id], references: [id])
+  creator  creators  @relation(fields: [creator_id], references: [id])
+}
+
+/// =======================
+/// CONTRIBUTORS
+/// =======================
+
+model contributors {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(150)
+  role       String?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  document_contributors document_contributors[]
+}
+
+model document_contributors {
+  id             Int      @id @default(autoincrement())
+  document_id    Int
+  contributor_id Int
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  document    documents    @relation(fields: [document_id], references: [id])
+  contributor contributors @relation(fields: [contributor_id], references: [id])
+}
+
+/// =======================
+/// SUBJECTS
+/// =======================
+
+model subjects {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(150)
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  document_subjects document_subjects[]
+}
+
+model document_subjects {
+  id          Int      @id @default(autoincrement())
+  document_id Int
+  subject_id  Int
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  document documents @relation(fields: [document_id], references: [id])
+  subject  subjects  @relation(fields: [subject_id], references: [id])
+}
+
+/// =======================
+/// RELATIONS
+/// =======================
+
+model document_relations {
+  id                  Int          @id @default(autoincrement())
+  document_id         Int
+  related_document_id Int
+  relation_type       RelationType
+  created_at          DateTime     @default(now())
+  updated_at          DateTime     @updatedAt
+
+  document         documents @relation(fields: [document_id], references: [id])
+  related_document documents @relation("related_docs", fields: [related_document_id], references: [id])
+}
+
+enum RelationType {
+  isPartOf
+  references
+  isReferencedBy
+  isVersionOf
+  hasVersion
+  requires
+}
+
+/// =======================
+/// KEYWORDS
+/// =======================
+
+model document_keywords {
+  id          Int      @id @default(autoincrement())
+  document_id Int
+  keyword     String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  document documents @relation(fields: [document_id], references: [id])
+}
+
+/// =======================
+/// CHUNKS + EMBEDDING
+/// =======================
+
+model document_chunks {
+  id          Int                    @id @default(autoincrement())
+  document_id Int
+  chunk_index Int
+  content     String
+  token_count Int
+  embedding   Unsupported("vector")?
+  created_at  DateTime               @default(now())
+  updated_at  DateTime               @updatedAt
+
+  document documents @relation(fields: [document_id], references: [id])
+}
+
+/// =======================
+/// CITATIONS
+/// =======================
+
+model citations {
+  id                 Int              @id @default(autoincrement())
+  citing_document_id Int
+  cited_document_id  Int
+  relation           CitationRelation
+  context_excerpt    String?
+  confidence         Float?
+  created_at         DateTime         @default(now())
+  updated_at         DateTime         @updatedAt
+
+  citing_document documents @relation("document_citations_citing", fields: [citing_document_id], references: [id])
+  cited_document  documents @relation("document_citations_cited", fields: [cited_document_id], references: [id])
+}
+
+enum CitationRelation {
+  supports
+  disputes
+  mentions
 }
