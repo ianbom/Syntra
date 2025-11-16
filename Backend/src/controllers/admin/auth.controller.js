@@ -1,5 +1,5 @@
 import {successResponse, errorResponse} from "../../utils/response.js"
-import { register } from "../../services/auth.service.js";
+import { register, login, myProfile } from "../../services/auth.service.js";
 
 export const adminRegister = async (req, res) => {
     try {
@@ -18,3 +18,27 @@ export const adminRegister = async (req, res) => {
         );
     }
 };
+
+export const adminLogin = async (req, res) => {
+    try {
+        const result = await login(req.body);
+        return successResponse(res, "Login successful", result, 200);
+    } catch (error) {
+        return errorResponse(res, error.message || "Login failed", 400);
+    }   
+
+}
+
+export const adminProfile = async (req, res) => {
+
+    try {
+        
+        const userId = req.user.id;
+        const profile = await myProfile(userId);
+        return successResponse(res, "Profile fetched successfully", profile, 200);
+
+    } catch (error) {
+        return errorResponse(res, error.message || "Failed to fetch profile", 400);
+    }
+
+} 
