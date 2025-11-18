@@ -2,6 +2,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.pdf_service import extract_pages
 from app.services.embedding_service import embedding_local
 from app.utils.token_utils import count_tokens
+from app.models.embed_request import EmbedURLRequest
 import requests
 
 router = APIRouter()
@@ -11,7 +12,6 @@ router = APIRouter()
 async def embed_pdf(document_id: int, pdf: UploadFile = File(...)):
     file_bytes = await pdf.read()
 
-    # Save temp PDF for extraction
     temp_path = "temp_uploaded.pdf"
     with open(temp_path, "wb") as f:
         f.write(file_bytes)
@@ -38,8 +38,14 @@ async def embed_pdf(document_id: int, pdf: UploadFile = File(...)):
     return {"message": "success", "chunks": results}
 
 
+# ================================================================
+#   FIXED embed-url → gunakan body JSON (document_id + url)
+# ================================================================
 @router.post("/embed-url")
-async def embed_url(document_id: int, url: str):
+async def embed_url(body: EmbedURLRequest):
+    document_id = body.document_id
+    url = body.url
+
     try:
         res = requests.get(url, timeout=15)
         if res.status_code != 200:
@@ -47,7 +53,6 @@ async def embed_url(document_id: int, url: str):
     except:
         raise HTTPException(400, "Invalid URL or unreachable")
 
-    # Save temp file
     temp_path = "temp_downloaded.pdf"
     with open(temp_path, "wb") as f:
         f.write(res.content)
