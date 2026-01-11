@@ -3,7 +3,7 @@ from app.services.pdf_downloader import download_pdf
 from app.services.grobid_header import extract_header
 from app.services.grobid_fulltext import extract_relations
 from app.services.metadata_formatter import format_for_database
-from app.models.extract_url_request import ExtractURLRequest
+from app.schemas.extract_url_request import ExtractURLRequest
 
 router = APIRouter()
 

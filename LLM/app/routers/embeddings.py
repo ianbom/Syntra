@@ -2,7 +2,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from app.services.pdf_service import extract_pages
 from app.services.embedding_service import embedding_local
 from app.utils.token_utils import count_tokens
-from app.models.embed_request import EmbedURLRequest
+from app.schemas.embed_request import EmbedURLRequest
 import requests
 
 router = APIRouter()

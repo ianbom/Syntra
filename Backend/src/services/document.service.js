@@ -14,11 +14,9 @@ export const createDocument = async (data, file) => {
 
   const document = await saveInitialDocument(data, generatedFileName, fileUrl);
 
-  // STEP 1: Metadata
   const metadata = await getMetadataResponse(document.id, fileUrl);
   await saveExtractedMetadata(document.id, metadata.metadata);
 
-  // STEP 2: Embedding + Chunking
   const embeddingResult = await getEmbeddingResponse(document.id, fileUrl);
   await saveDocumentChunks(document.id, embeddingResult.chunks);
 
